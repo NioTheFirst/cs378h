@@ -232,9 +232,9 @@ int main ( int argc, char* argv[], char* env[] ) {
 
   // Allocate memory
   //void *mem = aligned_alloc( VALUE_4096, (qword) MEMSIZE_BYTES );
-  qword* mem = (qword*) aligned_alloc(VALUE_4096, (size_t)MEMSIZE_BYTES);
+  //qword* mem = (qword*) aligned_alloc(VALUE_4096, (size_t)MEMSIZE_BYTES);
 
-  if (mem == NULL) {
+  /*if (mem == NULL) {
     perror("Failed to allocate aligned memory.");
     exit(  EXIT_FAILURE) ;
   }
@@ -242,8 +242,9 @@ int main ( int argc, char* argv[], char* env[] ) {
   printf( "Allocated %llu 4K-aligned bytes at address %p.\n",
           (qword) MEMSIZE_BYTES,
           mem);
+  */
 
-  for( qword r = 0; r <= log_matrix_size; r++ ) {
+  /*for( qword r = 0; r <= log_matrix_size; r++ ) {
     matrix_ok = 1;
     matrix_size = int_pow( 2, r );
 
@@ -269,6 +270,76 @@ int main ( int argc, char* argv[], char* env[] ) {
     matrix_ok = check_transpose( mem, matrix_size );
 
     printf( "Matrix transpose of size %5lld is (Bad 0, OK 1):  %d.\n", matrix_size, matrix_ok );
+  }*/
+
+  // primes for "+/- first 10 primes"
+  static const int primes[10] = {2,3,5,7,11,13,17,19,23,29};
+
+  int min_pow = 7;
+  int max_pow = 15;
+
+  // compute maximum N we will test to size the allocation
+  qword max_n = (1LL << max_pow) + primes[9];
+
+  // allocate for max_n x max_n
+  size_t mem_qwords = (size_t)max_n * (size_t)max_n;
+  size_t mem_bytes  = mem_qwords * sizeof(qword);
+
+  qword* mem = (qword*) aligned_alloc(VALUE_4096, (mem_bytes + VALUE_4096 - 1) / VALUE_4096 * VALUE_4096);
+  if (!mem) { perror("aligned_alloc"); exit(EXIT_FAILURE); }
+
+  // print CSV header
+  printf("part,core_n,test_n,delta,cycles,cycles_per_elem,ok\n");
+
+  for (int p = min_pow; p <= max_pow; p++) {
+    qword core = 1LL << p;
+
+    // run core itself (delta=0)
+    {
+      qword n = core;
+      init_square_matrix(mem, n);
+      uint64_t t0 = rdtsc_start();
+      transpose(mem, n, case_num);
+      uint64_t t1 = rdtsc_stop();
+      uint64_t cycles = t1 - t0;
+      int ok = check_transpose(mem, n);
+      printf("%d,%lld,%lld,%d,%" PRIu64 ",%.6f,%d\n",
+            case_num, (long long)core, (long long)n, 0, cycles,
+            (double)cycles / ((double)n * (double)n), ok);
+    }
+
+    // run +/- primes
+    for (int i = 0; i < 10; i++) {
+      int d = primes[i];
+
+      // core - d
+      {
+        qword n = core - d;
+        init_square_matrix(mem, n);
+        uint64_t t0 = rdtsc_start();
+        transpose(mem, n, case_num);
+        uint64_t t1 = rdtsc_stop();
+        uint64_t cycles = t1 - t0;
+        int ok = check_transpose(mem, n);
+        printf("%d,%lld,%lld,%d,%" PRIu64 ",%.6f,%d\n",
+              case_num, (long long)core, (long long)n, -d, cycles,
+              (double)cycles / ((double)n * (double)n), ok);
+      }
+
+      // core + d
+      {
+        qword n = core + d;
+        init_square_matrix(mem, n);
+        uint64_t t0 = rdtsc_start();
+        transpose(mem, n, case_num);
+        uint64_t t1 = rdtsc_stop();
+        uint64_t cycles = t1 - t0;
+        int ok = check_transpose(mem, n);
+        printf("%d,%lld,%lld,%d,%" PRIu64 ",%.6f,%d\n",
+              case_num, (long long)core, (long long)n, +d, cycles,
+              (double)cycles / ((double)n * (double)n), ok);
+      }
+    }
   }
 
   free( mem );  // Should we call ``aligned_free''?  Not available on MacOS.
