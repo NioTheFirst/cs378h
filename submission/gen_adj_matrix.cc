@@ -22,18 +22,18 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i < j) { // No self-loops
-                adjacency_matrix[i][j] = rand() % 2; // 0 or 1 with equal probability
+                adjacency_matrix[i][j] = (rand() % 10 == 0); // sparse matrix: 1/10
             }
         }
     }
 
     // Print the adjacency matrix
-    for (const auto& row : adjacency_matrix) {
+    /*for (const auto& row : adjacency_matrix) {
         for (const auto& val : row) {
             cout << val << " ";
         }
         cout << endl;
-    }
+    }*/
 
     if (argc == 3) {
         ofstream outfile(argv[2]);
