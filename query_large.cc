@@ -52,16 +52,25 @@ Then, sort query.
 //Hence, I made a simple version that produces queries by randomly deciding (based on the collision ratio) whether to sample a value from the database or generate a fresh random value; when sampling from the database, it selects a random index and repeats that value multiple times so that the average repetition matches the specified frequency.
 //I have included the query text in submission.
 //You can find it in biased_queries.txt. This is the one that I used to get the results from.
-#Here are the results:
+#Here are the results: (42753)
 * Chunk size (MiB)    Total cycles  Time
-*Default (128)       614653809276   3m30.849s
-*64                  576438359515   3m17.773s
-*256                 602622736334   3m26.791s
-*512                 635377232660   3m38.123s
-*32                  682743978886   3m54.324s
+*Default (128)       132424970570   2m55.757s
+*64                  137824677956   3m3.123s
+*256                 119877150849   2m59.371s
+*512                 108203847354  2m46.660s
+*32                  147100711874   2m55.028s
 *
-*You may recall that my HW5 stated that chunk size 64 was the best.
+*You may recall that my HW5 stated that chunk size 64 was the best. 
+*However, in this case, it seems that larger chunk sizes perform better.
+*One explanation may be that due to the format of the task, there is not a need to actually finish merging the entirety of the database.
+*Once the queries finish, the merging can stop.
+*In that sense, it may be more efficient to have larger chunk sizes, since that would reduce the number of runs and thus the number of comparisons needed to merge the queries with the database.
+*However, this observation is solely due to the format of biased_queries.txt, and in general, relying on the 64MB chunk size is probably the best bet, since it is the most efficient chunk size for sort.
 *
+*There would be a significant slowdown if the task was instead formatted as "for each query, count how many times it appears in the database", since then we would have to do a binary search for each query in the sorted database, which would be O(Q log D) where Q is the number of queries and D is the number of database entries.
+*Plus, it would potentially be difficult in terms of cache efficiency, since we would need to keep the data structure in memory.
+*However, an easy way to circumvent this is to read the queries first, then only store the ones we need.
+*In that case, since queries is small (100K), it will fit in memory.
  */
 
 #include <algorithm>
